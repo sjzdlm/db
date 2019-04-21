@@ -485,12 +485,14 @@ func Insert2(XX *xorm.Engine, sql string, tb string, Args ...interface{}) int64 
 
 	sql = `select last_insert_rowid() as id from ` + tb
 	if XX.DriverName() == "mysql" {
-		sql = `SELECT LAST_INSERT_ID() AS ID`
+		sql = `SELECT LAST_INSERT_ID() AS id`
+		//sql = `select @@IDENTITY as id`
 	}
 	if XX.DriverName() == "mssql" {
 		sql = `SELECT @@IDENTITY as id`
 	}
-	var r, err1 = XX.Query(sql)
+	var r, err1 = session.Query(sql)
+
 	if err1 != nil {
 		session.Rollback()
 		return 0
