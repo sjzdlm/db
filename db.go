@@ -44,6 +44,9 @@ func InitX() {
 
 //生成新的数据库链接
 func NewDb(constr string) *xorm.Engine {
+	if constr == "" { //如果为空默认返回系统库
+		return X
+	}
 	// 查找键值是否存在
 	if v, ok := dbPool[constr]; ok {
 		return v
