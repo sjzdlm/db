@@ -15,7 +15,7 @@ import (
 
 	//odbc链接库
 	"github.com/axgle/mahonia"
-	_ "github.com/lunny/godbc"
+	//_ "github.com/lunny/godbc"
 )
 
 type PageData struct {
