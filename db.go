@@ -255,10 +255,12 @@ func Pager2(XX *xorm.Engine, page int, pageSize int, sqlorArgs ...interface{}) P
 	}
 
 	var args0 = sqlorArgs[0]
-	var s = Substring(sqlorArgs[0].(string), "select", "from")
+	//var s = Substring(sqlorArgs[0].(string), "select", "from")
 
 	//获取总记录数
-	var s1 = strings.Replace(sqlorArgs[0].(string), s, " count(*) as counts ", -1)
+	//var s1 = strings.Replace(sqlorArgs[0].(string), s, " count(*) as counts ", -1)
+	var s1 = `select count(*) as counts from (` + sqlorArgs[0].(string) + `) as a`
+	//var s1 = strings.Replace(sqlorArgs[0].(string), s, " count(*) as counts ", -1)
 	sqlorArgs[0] = s1
 	var a1 = First2(XX, sqlorArgs...)
 	var rows = 0
@@ -456,6 +458,70 @@ func Exec2(XX *xorm.Engine, sql string, Args ...interface{}) int64 {
 }
 
 /*
+Insert 执行插入语句
+*/
+func Insert(sql string, tb string, Args ...interface{}) int64 {
+	var index = 0
+	rear := append([]interface{}{}, Args[index:]...)
+	Args = append(Args[0:index], sql)
+	Args = append(Args, rear...)
+
+	//启用事务
+	session := X.NewSession()
+	defer session.Close()
+	session.Begin()
+
+	//为并发加锁
+	xLock.Lock()
+	_, err := session.Exec(Args...)
+	xLock.Unlock()
+	//_, err := XX.Exec(Args...)
+
+	if err != nil {
+		beego.Error("sql错误:" + err.Error() + "\r\n" + sql)
+		fmt.Println("db exec2 error:", sql, Args, err.Error())
+		if strings.Contains(err.Error(), "通讯链接失败") {
+			fmt.Println("通讯链接失败,重建所有链接...")
+			dbPool = make(map[string]*xorm.Engine)
+		}
+		session.Rollback()
+		return 0
+	}
+
+	sql = `select last_insert_rowid() as id from ` + tb
+	if X.DriverName() == "sqlite" {
+		sql = `SELECT last_insert_rowid() AS id`
+	}
+	if X.DriverName() == "mysql" {
+		sql = `SELECT LAST_INSERT_ID() AS id`
+	}
+	if X.DriverName() == "mssql" {
+		sql = `SELECT @@IDENTITY as id`
+	}
+	var r, err1 = session.Query(sql)
+
+	if err1 != nil {
+		session.Rollback()
+		return 0
+	}
+	rst := ParseByte(X.DriverName(), r)
+	if len(rst) < 1 {
+		session.Rollback()
+		return 0
+	}
+	var id = rst[0]["id"]
+	var i, _ = strconv.ParseInt(id, 10, 64)
+
+	//提交事务
+	err = session.Commit()
+	if err != nil {
+		return 0
+	}
+
+	return i
+}
+
+/*
 Insert 执行插入语句 --指定数据库链接
 */
 func Insert2(XX *xorm.Engine, sql string, tb string, Args ...interface{}) int64 {
@@ -487,9 +553,11 @@ func Insert2(XX *xorm.Engine, sql string, tb string, Args ...interface{}) int64 
 	}
 
 	sql = `select last_insert_rowid() as id from ` + tb
+	if XX.DriverName() == "sqlite" {
+		sql = `SELECT last_insert_rowid() AS id`
+	}
 	if XX.DriverName() == "mysql" {
 		sql = `SELECT LAST_INSERT_ID() AS id`
-		//sql = `select @@IDENTITY as id`
 	}
 	if XX.DriverName() == "mssql" {
 		sql = `SELECT @@IDENTITY as id`
