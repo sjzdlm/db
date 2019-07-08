@@ -49,13 +49,15 @@ func NewDb(constr string) *xorm.Engine {
 	}
 	// 查找键值是否存在
 	if v, ok := dbPool[constr]; ok {
+		fmt.Println("-----数据库连接:[", constr, "]已存在...")
 		return v
 	} else {
 		var con = First("select * from adm_conn where conn=?", constr)
 		if con == nil {
 			return nil
 		}
-		fmt.Println(con)
+		//fmt.Println(con)
+		fmt.Println("-----数据库连接:[", constr, "]创建成功...")
 		var XX *xorm.Engine
 		var err error
 		if con["dbtype"] == "sqlite" {
@@ -148,6 +150,15 @@ func Query2(XX *xorm.Engine, sqlorArgs ...interface{}) []map[string]string {
 			fmt.Println("通讯链接失败,重建所有链接...")
 			dbPool = make(map[string]*xorm.Engine)
 		}
+
+		//记录debug日志
+		var atime = time.Now().Format("2006-01-02 15:04:05")
+		var ip = ""
+		var log = fmt.Sprintf("%s %s", sqlorArgs, err.Error())
+		Exec("insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
+			"", "", "", "系统日志", "SQL", XX.DriverName()+" Query2 查询错误", log, ip, atime,
+		)
+
 		return nil
 	}
 	rst := ParseByte(XX.DriverName(), rsts)
@@ -177,6 +188,14 @@ func First2(XX *xorm.Engine, sqlorArgs ...interface{}) map[string]string {
 			fmt.Println("通讯链接失败,重建所有链接...")
 			dbPool = make(map[string]*xorm.Engine)
 		}
+		//记录debug日志
+		var atime = time.Now().Format("2006-01-02 15:04:05")
+		var ip = ""
+		var log = fmt.Sprintf("%s %s", sqlorArgs, err.Error())
+		Exec("insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
+			"", "", "", "系统日志", "SQL", XX.DriverName()+" First2 查询错误", log, ip, atime,
+		)
+
 		return nil
 	}
 	rst := ParseByte(XX.DriverName(), rsts)
@@ -549,6 +568,15 @@ func Insert2(XX *xorm.Engine, sql string, tb string, Args ...interface{}) int64 
 			dbPool = make(map[string]*xorm.Engine)
 		}
 		session.Rollback()
+
+		//记录debug日志
+		var atime = time.Now().Format("2006-01-02 15:04:05")
+		var ip = ""
+		var log = fmt.Sprintf("%s %s %s", sql, Args, err.Error())
+		Exec("insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
+			"", "", "", "系统日志", "SQL", XX.DriverName()+" Insert2 查询错误", log, ip, atime,
+		)
+
 		return 0
 	}
 
