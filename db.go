@@ -42,6 +42,17 @@ func InitX() {
 	}
 }
 
+/*
+  从连接池删除某个连接
+*/
+func Del(conn string) {
+	// 查找键值是否存在
+	if v, ok := dbPool[conn]; ok {
+		v.Close()
+		delete(dbPool, conn)
+	}
+}
+
 //生成新的数据库链接
 func NewDb(constr string) *xorm.Engine {
 	if constr == "" { //如果为空默认返回系统库
