@@ -64,10 +64,10 @@ func NewDb(constr string) *xorm.Engine {
 		return v
 	} else {
 		var con = First("select * from adm_conn where conn=?", constr)
-		if con == nil {
+		if con == nil || len(con) < 1 {
 			return nil
 		}
-		//fmt.Println(con)
+		fmt.Println(con)
 		fmt.Println("-----数据库连接:[", constr, "]创建成功...")
 		var XX *xorm.Engine
 		var err error
