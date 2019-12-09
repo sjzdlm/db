@@ -166,7 +166,20 @@ func Query2(XX *xorm.Engine, sqlorArgs ...interface{}) []map[string]string {
 		//如果这个方法执行超时x秒，则会记录日志
 		var paramSlice []string
 		for _, param := range sqlorArgs {
-			paramSlice = append(paramSlice, param.(string))
+			var p = ""
+			switch param.(type) {
+			case string:
+				p = param.(string)
+			case int:
+				p = fmt.Sprintf("%d", param)
+			case int32:
+				p = fmt.Sprintf("%d", param)
+			case int64:
+				p = fmt.Sprintf("%d", param)
+			default:
+				p = fmt.Sprintf("%s", param)
+			}
+			paramSlice = append(paramSlice, p)
 		}
 		_logparams := strings.Join(paramSlice, ",")
 		defer TimeoutWarning(XX.DriverName()+"[Query2]", _logparams, time.Now(), float64(0.5))
@@ -206,7 +219,20 @@ func First2(XX *xorm.Engine, sqlorArgs ...interface{}) map[string]string {
 	//如果这个方法执行超时x秒，则会记录日志
 	var paramSlice []string
 	for _, param := range sqlorArgs {
-		paramSlice = append(paramSlice, param.(string))
+		var p = ""
+		switch param.(type) {
+		case string:
+			p = param.(string)
+		case int:
+			p = fmt.Sprintf("%d", param)
+		case int32:
+			p = fmt.Sprintf("%d", param)
+		case int64:
+			p = fmt.Sprintf("%d", param)
+		default:
+			p = fmt.Sprintf("%s", param)
+		}
+		paramSlice = append(paramSlice, p)
 	}
 	_logparams := strings.Join(paramSlice, ",")
 	defer TimeoutWarning(XX.DriverName()+"[First2]", _logparams, time.Now(), float64(0.5))
@@ -303,7 +329,20 @@ func Pager2(XX *xorm.Engine, page int, pageSize int, sqlorArgs ...interface{}) P
 	//如果这个方法执行超时x秒，则会记录日志
 	var paramSlice []string
 	for _, param := range sqlorArgs {
-		paramSlice = append(paramSlice, param.(string))
+		var p = ""
+		switch param.(type) {
+		case string:
+			p = param.(string)
+		case int:
+			p = fmt.Sprintf("%d", param)
+		case int32:
+			p = fmt.Sprintf("%d", param)
+		case int64:
+			p = fmt.Sprintf("%d", param)
+		default:
+			p = fmt.Sprintf("%s", param)
+		}
+		paramSlice = append(paramSlice, p)
 	}
 	_logparams := strings.Join(paramSlice, ",")
 	defer TimeoutWarning(XX.DriverName()+"[Pager2]", _logparams, time.Now(), float64(0.5))
@@ -459,9 +498,9 @@ func Exec(sql string, Args ...interface{}) int64 {
 	session.Begin()
 
 	//为并发加锁
-	xLock.Lock()
+	//xLock.Lock()
 	_, err := session.Exec(Args...)
-	xLock.Unlock()
+	//xLock.Unlock()
 	//_, err := X.Exec(Args...)
 
 	if err != nil {
@@ -492,7 +531,20 @@ func Exec2(XX *xorm.Engine, sql string, Args ...interface{}) int64 {
 	//如果这个方法执行超时x秒，则会记录日志
 	var paramSlice []string
 	for _, param := range Args {
-		paramSlice = append(paramSlice, param.(string))
+		var p = ""
+		switch param.(type) {
+		case string:
+			p = param.(string)
+		case int:
+			p = fmt.Sprintf("%d", param)
+		case int32:
+			p = fmt.Sprintf("%d", param)
+		case int64:
+			p = fmt.Sprintf("%d", param)
+		default:
+			p = fmt.Sprintf("%s", param)
+		}
+		paramSlice = append(paramSlice, p)
 	}
 	_logparams := strings.Join(paramSlice, ",")
 	defer TimeoutWarning(XX.DriverName()+"[Exec2]", sql+_logparams, time.Now(), float64(0.5))
@@ -603,7 +655,20 @@ func Insert2(XX *xorm.Engine, sql string, tb string, Args ...interface{}) int64 
 	//如果这个方法执行超时x秒，则会记录日志
 	var paramSlice []string
 	for _, param := range Args {
-		paramSlice = append(paramSlice, param.(string))
+		var p = ""
+		switch param.(type) {
+		case string:
+			p = param.(string)
+		case int:
+			p = fmt.Sprintf("%d", param)
+		case int32:
+			p = fmt.Sprintf("%d", param)
+		case int64:
+			p = fmt.Sprintf("%d", param)
+		default:
+			p = fmt.Sprintf("%s", param)
+		}
+		paramSlice = append(paramSlice, p)
 	}
 	_logparams := strings.Join(paramSlice, ",")
 	defer TimeoutWarning(XX.DriverName()+"[Insert2]", sql+_logparams, time.Now(), float64(0.5))
