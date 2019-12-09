@@ -162,6 +162,16 @@ func Query2(XX *xorm.Engine, sqlorArgs ...interface{}) []map[string]string {
 			dbPool = make(map[string]*xorm.Engine)
 		}
 
+		//--------------------------------------------------------------------------------------
+		//如果这个方法执行超时x秒，则会记录日志
+		var paramSlice []string
+		for _, param := range sqlorArgs {
+			paramSlice = append(paramSlice, param.(string))
+		}
+		_logparams := strings.Join(paramSlice, ",")
+		defer TimeoutWarning(XX.DriverName()+"[Query2]", _logparams, time.Now(), float64(0.5))
+		//--------------------------------------------------------------------------------------
+
 		//记录debug日志
 		var atime = time.Now().Format("2006-01-02 15:04:05")
 		var ip = ""
@@ -192,6 +202,16 @@ func First(sqlorArgs ...interface{}) map[string]string {
 
 //First SQL语句查询第一条记录 --指定数据库链接
 func First2(XX *xorm.Engine, sqlorArgs ...interface{}) map[string]string {
+	//--------------------------------------------------------------------------------------
+	//如果这个方法执行超时x秒，则会记录日志
+	var paramSlice []string
+	for _, param := range sqlorArgs {
+		paramSlice = append(paramSlice, param.(string))
+	}
+	_logparams := strings.Join(paramSlice, ",")
+	defer TimeoutWarning(XX.DriverName()+"[First2]", _logparams, time.Now(), float64(0.5))
+	//--------------------------------------------------------------------------------------
+
 	rsts, err := XX.Query(sqlorArgs...)
 	if err != nil {
 		fmt.Println("db first2 error:", err.Error(), sqlorArgs[0])
@@ -279,6 +299,16 @@ func Pager(page int, pageSize int, sqlorArgs ...interface{}) interface{} {
 
 //Pager2 分页查询,返回easyui分页数据结构
 func Pager2(XX *xorm.Engine, page int, pageSize int, sqlorArgs ...interface{}) PageData {
+	//--------------------------------------------------------------------------------------
+	//如果这个方法执行超时x秒，则会记录日志
+	var paramSlice []string
+	for _, param := range sqlorArgs {
+		paramSlice = append(paramSlice, param.(string))
+	}
+	_logparams := strings.Join(paramSlice, ",")
+	defer TimeoutWarning(XX.DriverName()+"[Pager2]", _logparams, time.Now(), float64(0.5))
+	//--------------------------------------------------------------------------------------
+
 	//添加分页控制
 	if page > 0 {
 		page = page - 1
@@ -458,6 +488,15 @@ func Exec2(XX *xorm.Engine, sql string, Args ...interface{}) int64 {
 	Args = append(Args[0:index], sql)
 	Args = append(Args, rear...)
 
+	//--------------------------------------------------------------------------------------
+	//如果这个方法执行超时x秒，则会记录日志
+	var paramSlice []string
+	for _, param := range Args {
+		paramSlice = append(paramSlice, param.(string))
+	}
+	_logparams := strings.Join(paramSlice, ",")
+	defer TimeoutWarning(XX.DriverName()+"[Exec2]", sql+_logparams, time.Now(), float64(0.5))
+
 	//启用事务
 	session := XX.NewSession()
 	defer session.Close()
@@ -559,6 +598,16 @@ func Insert2(XX *xorm.Engine, sql string, tb string, Args ...interface{}) int64 
 	rear := append([]interface{}{}, Args[index:]...)
 	Args = append(Args[0:index], sql)
 	Args = append(Args, rear...)
+
+	//--------------------------------------------------------------------------------------
+	//如果这个方法执行超时x秒，则会记录日志
+	var paramSlice []string
+	for _, param := range Args {
+		paramSlice = append(paramSlice, param.(string))
+	}
+	_logparams := strings.Join(paramSlice, ",")
+	defer TimeoutWarning(XX.DriverName()+"[Insert2]", sql+_logparams, time.Now(), float64(0.5))
+	//--------------------------------------------------------------------------------------
 
 	//启用事务
 	session := XX.NewSession()
@@ -689,4 +738,19 @@ func RandomString(lenght int) string {
 		result = append(result, bytes[r.Intn(len(bytes))])
 	}
 	return string(result)
+}
+
+//超时告警
+func TimeoutWarning(tag, msg string, start time.Time, timeLimit float64) {
+	dis := time.Now().Sub(start).Seconds()
+	if dis > timeLimit {
+		fmt.Println("运行超时告警：", tag, dis, "秒", tag, msg)
+		//记录debug日志
+		var atime = time.Now().Format("2006-01-02 15:04:05")
+		var ip = ""
+		var log = msg
+		Exec("insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
+			"", "", "", "系统日志", "告警", tag+"[运行超时告警 "+fmt.Sprintf("%f", dis)+"秒]", log, ip, atime,
+		)
+	}
 }
