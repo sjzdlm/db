@@ -377,7 +377,13 @@ func Pager2(XX *xorm.Engine, page int, pageSize int, sqlorArgs ...interface{}) P
 	//获取当前页数据
 	sqlorArgs[0] = args0 //恢复原语句
 	//增加分页条件
-	sqlorArgs[0] = sqlorArgs[0].(string) + " limit " + strconv.Itoa(page*pageSize) + "," + strconv.Itoa(pageSize)
+	//判断是否包含limit
+	var sql = sqlorArgs[0].(string)
+	if strings.Contains(sql, " limit ") {
+		sql = "select * from (" + sql + ") tb "
+	}
+	sqlorArgs[0] = sql + " limit " + strconv.Itoa(page*pageSize) + "," + strconv.Itoa(pageSize)
+	//sqlorArgs[0] = sqlorArgs[0].(string) + " limit " + strconv.Itoa(page*pageSize) + "," + strconv.Itoa(pageSize)
 	var list = Query2(XX, sqlorArgs...)
 
 	// var rst struct {
