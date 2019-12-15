@@ -199,6 +199,70 @@ func Query2(XX *xorm.Engine, sqlorArgs ...interface{}) []map[string]string {
 	return rst
 }
 
+//Query3 SQL语句查询 --指定链接
+func Query3(XX *xorm.Engine, debug, uid, username, module, ip string, sqlorArgs ...interface{}) []map[string]string {
+	//fmt.Println("drivername:",XX.DriverName())
+	//--------------------------------------------------------------------------------------
+	//如果这个方法执行超时x秒，则会记录日志
+	var paramSlice []string
+	for _, param := range sqlorArgs {
+		var p = ""
+		switch param.(type) {
+		case string:
+			p = param.(string)
+		case int:
+			p = fmt.Sprintf("%d", param)
+		case int32:
+			p = fmt.Sprintf("%d", param)
+		case int64:
+			p = fmt.Sprintf("%d", param)
+		default:
+			p = fmt.Sprintf("%s", param)
+		}
+		paramSlice = append(paramSlice, p)
+	}
+	_logparams := strings.Join(paramSlice, ",")
+	defer TimeoutWarning(XX.DriverName()+"[Query2]", _logparams, time.Now(), float64(0.5))
+	//--------------------------------------------------------------------------------------
+
+	rsts, err := XX.Query(sqlorArgs...)
+	if err != nil {
+		fmt.Println("db query2 error:", err.Error())
+		fmt.Println("sql:", sqlorArgs)
+		if strings.Contains(err.Error(), "通讯链接失败") {
+			fmt.Println("通讯链接失败,重建所有链接...")
+			dbPool = make(map[string]*xorm.Engine)
+		}
+
+		//记录debug日志
+		var atime = time.Now().Format("2006-01-02 15:04:05")
+		var ip = ""
+		var log = fmt.Sprintf("%s %s", sqlorArgs, err.Error())
+		Exec("insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
+			"", "", "", "系统日志", "SQL", XX.DriverName()+" Query3 查询错误", log, ip, atime,
+		)
+		//调试状态记录SQL---------------------------
+		if debug == "1" {
+			var atime = time.Now().Format("2006-01-02 15:04:05")
+			var log = fmt.Sprintf("%s %s", _logparams, "ok")
+			Exec("insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
+				"", uid, username, module, "DEBUG", module, XX.DriverName()+" Query3 查询错误", log, ip, atime,
+			)
+		}
+		return nil
+	}
+	//调试状态记录SQL---------------------------
+	if debug == "1" {
+		var atime = time.Now().Format("2006-01-02 15:04:05")
+		var log = fmt.Sprintf(" %s %s", _logparams, "ok")
+		Exec("insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
+			"", uid, username, module, "DEBUG", module, XX.DriverName()+" Query3 查询错误", log, ip, atime,
+		)
+	}
+	rst := ParseByte(XX.DriverName(), rsts)
+	return rst
+}
+
 //First SQL语句查询第一条记录
 func First(sqlorArgs ...interface{}) map[string]string {
 	rsts, err := X.Query(sqlorArgs...)
@@ -213,7 +277,7 @@ func First(sqlorArgs ...interface{}) map[string]string {
 	return nil
 }
 
-//First SQL语句查询第一条记录 --指定数据库链接
+//First2 SQL语句查询第一条记录 --指定数据库链接
 func First2(XX *xorm.Engine, sqlorArgs ...interface{}) map[string]string {
 	//--------------------------------------------------------------------------------------
 	//如果这个方法执行超时x秒，则会记录日志
@@ -254,6 +318,71 @@ func First2(XX *xorm.Engine, sqlorArgs ...interface{}) map[string]string {
 		)
 
 		return nil
+	}
+	rst := ParseByte(XX.DriverName(), rsts)
+	if len(rst) > 0 {
+		return rst[0]
+	}
+	return nil
+}
+
+//First3 SQL语句查询第一条记录 --指定数据库链接
+func First3(XX *xorm.Engine, debug, uid, username, module, ip string, sqlorArgs ...interface{}) map[string]string {
+	//--------------------------------------------------------------------------------------
+	//如果这个方法执行超时x秒，则会记录日志
+	var paramSlice []string
+	for _, param := range sqlorArgs {
+		var p = ""
+		switch param.(type) {
+		case string:
+			p = param.(string)
+		case int:
+			p = fmt.Sprintf("%d", param)
+		case int32:
+			p = fmt.Sprintf("%d", param)
+		case int64:
+			p = fmt.Sprintf("%d", param)
+		default:
+			p = fmt.Sprintf("%s", param)
+		}
+		paramSlice = append(paramSlice, p)
+	}
+	_logparams := strings.Join(paramSlice, ",")
+	defer TimeoutWarning(XX.DriverName()+"[First3]", _logparams, time.Now(), float64(0.5))
+	//--------------------------------------------------------------------------------------
+
+	rsts, err := XX.Query(sqlorArgs...)
+	if err != nil {
+		fmt.Println("db first2 error:", err.Error(), sqlorArgs[0])
+		if strings.Contains(err.Error(), "通讯链接失败") {
+			fmt.Println("通讯链接失败,重建所有链接...")
+			dbPool = make(map[string]*xorm.Engine)
+		}
+		//记录debug日志
+		var atime = time.Now().Format("2006-01-02 15:04:05")
+		var ip = ""
+		var log = fmt.Sprintf("%s %s", sqlorArgs, err.Error())
+		Exec("insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
+			"", "", "", "系统日志", "SQL", XX.DriverName()+" First3 查询错误", log, ip, atime,
+		)
+		//调试状态记录SQL---------------------------
+		if debug == "1" {
+			var atime = time.Now().Format("2006-01-02 15:04:05")
+			var log = fmt.Sprintf("%s %s", _logparams, "ok")
+			Exec("insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
+				"", uid, username, module, "DEBUG", module, XX.DriverName()+" First3 执行错误", log, ip, atime,
+			)
+		}
+
+		return nil
+	}
+	//调试状态记录SQL---------------------------
+	if debug == "1" {
+		var atime = time.Now().Format("2006-01-02 15:04:05")
+		var log = fmt.Sprintf(" %s %s", _logparams, "ok")
+		Exec("insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
+			"", uid, username, module, "DEBUG", module, XX.DriverName()+" First3 执行错误", log, ip, atime,
+		)
 	}
 	rst := ParseByte(XX.DriverName(), rsts)
 	if len(rst) > 0 {
@@ -385,6 +514,94 @@ func Pager2(XX *xorm.Engine, page int, pageSize int, sqlorArgs ...interface{}) P
 	sqlorArgs[0] = sql + " limit " + strconv.Itoa(page*pageSize) + "," + strconv.Itoa(pageSize)
 	//sqlorArgs[0] = sqlorArgs[0].(string) + " limit " + strconv.Itoa(page*pageSize) + "," + strconv.Itoa(pageSize)
 	var list = Query2(XX, sqlorArgs...)
+
+	// var rst struct {
+	// 	Total int                 `json:"total"`
+	// 	Pages int                 `json:"pages"`
+	// 	Rows  []map[string]string `json:"rows"`
+	// }
+	var rst PageData
+
+	rst.Total = rows
+	rst.Pages = pages
+	rst.Rows = list
+
+	//fmt.Println("sqlorArgs:",sqlorArgs)
+
+	return rst
+}
+
+//Pager3 分页查询,返回easyui分页数据结构
+func Pager3(XX *xorm.Engine, debug, uid, username, module, ip string, page int, pageSize int, sqlorArgs ...interface{}) PageData {
+	//--------------------------------------------------------------------------------------
+	//如果这个方法执行超时x秒，则会记录日志
+	var paramSlice []string
+	for _, param := range sqlorArgs {
+		var p = ""
+		switch param.(type) {
+		case string:
+			p = param.(string)
+		case int:
+			p = fmt.Sprintf("%d", param)
+		case int32:
+			p = fmt.Sprintf("%d", param)
+		case int64:
+			p = fmt.Sprintf("%d", param)
+		default:
+			p = fmt.Sprintf("%s", param)
+		}
+		paramSlice = append(paramSlice, p)
+	}
+	_logparams := strings.Join(paramSlice, ",")
+	defer TimeoutWarning(XX.DriverName()+"[Pager2]", _logparams, time.Now(), float64(0.5))
+	//--------------------------------------------------------------------------------------
+
+	//添加分页控制
+	if page > 0 {
+		page = page - 1
+	}
+
+	var args0 = sqlorArgs[0]
+	//var s = Substring(sqlorArgs[0].(string), "select", "from")
+
+	//获取总记录数
+	//var s1 = strings.Replace(sqlorArgs[0].(string), s, " count(*) as counts ", -1)
+	var s1 = `select count(*) as counts from (` + sqlorArgs[0].(string) + `) as a`
+	//var s1 = strings.Replace(sqlorArgs[0].(string), s, " count(*) as counts ", -1)
+	sqlorArgs[0] = s1
+	var a1 = First2(XX, sqlorArgs...)
+	var rows = 0
+	if a1 != nil {
+		rows, _ = strconv.Atoi(a1["counts"])
+	}
+	//fmt.Println("rows:",rows)
+
+	//计算总页数
+	var pages = rows / pageSize
+	if rows%pageSize > 0 {
+		pages++
+	}
+	//fmt.Println(" pages:",pages)
+	//获取当前页数据
+	sqlorArgs[0] = args0 //恢复原语句
+	//增加分页条件
+	//判断是否包含limit
+	var sql = sqlorArgs[0].(string)
+	if strings.Contains(sql, " limit ") {
+		sql = "select * from (" + sql + ") tb "
+	}
+	sqlorArgs[0] = sql + " limit " + strconv.Itoa(page*pageSize) + "," + strconv.Itoa(pageSize)
+	//sqlorArgs[0] = sqlorArgs[0].(string) + " limit " + strconv.Itoa(page*pageSize) + "," + strconv.Itoa(pageSize)
+	var list = Query3(XX, debug, uid, username, module, ip, sqlorArgs...)
+
+	//调试状态记录SQL---------------------------
+	if debug == "1" {
+		var atime = time.Now().Format("2006-01-02 15:04:05")
+		var log = fmt.Sprintf(" %s %s %s", sql, _logparams, "ok")
+		Exec("insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
+			"", uid, username, module, "DEBUG", module, XX.DriverName()+" Pager3 执行错误", log, ip, atime,
+		)
+	}
 
 	// var rst struct {
 	// 	Total int                 `json:"total"`
@@ -573,8 +790,99 @@ func Exec2(XX *xorm.Engine, sql string, Args ...interface{}) int64 {
 			fmt.Println("通讯链接失败,重建所有链接...")
 			dbPool = make(map[string]*xorm.Engine)
 		}
+		//记录debug日志
+		var atime = time.Now().Format("2006-01-02 15:04:05")
+		var ip = ""
+		var log = fmt.Sprintf("%s %s %s", sql, Args, err.Error())
+		Exec("insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
+			"", "", "", "系统日志", "SQL", XX.DriverName()+" Exec2 执行错误", log, ip, atime,
+		)
+
 		session.Rollback()
 		return 0
+	}
+
+	err = session.Commit()
+	if err != nil {
+		return 0
+	}
+	return 1
+}
+
+/*
+Exec 执行SQL语句 --指定数据库链接
+*/
+func Exec3(XX *xorm.Engine, debug, uid, username, module, ip, sql string, Args ...interface{}) int64 {
+	var index = 0
+	rear := append([]interface{}{}, Args[index:]...)
+	Args = append(Args[0:index], sql)
+	Args = append(Args, rear...)
+
+	//--------------------------------------------------------------------------------------
+	//如果这个方法执行超时x秒，则会记录日志
+	var paramSlice []string
+	for _, param := range Args {
+		var p = ""
+		switch param.(type) {
+		case string:
+			p = param.(string)
+		case int:
+			p = fmt.Sprintf("%d", param)
+		case int32:
+			p = fmt.Sprintf("%d", param)
+		case int64:
+			p = fmt.Sprintf("%d", param)
+		default:
+			p = fmt.Sprintf("%s", param)
+		}
+		paramSlice = append(paramSlice, p)
+	}
+	_logparams := strings.Join(paramSlice, ",")
+	defer TimeoutWarning(XX.DriverName()+"[Exec2]", sql+_logparams, time.Now(), float64(0.5))
+
+	//启用事务
+	session := XX.NewSession()
+	defer session.Close()
+	session.Begin()
+
+	//为并发加锁
+	xLock.Lock()
+	_, err := session.Exec(Args...)
+	xLock.Unlock()
+	//_, err := XX.Exec(Args...)
+
+	if err != nil {
+		beego.Error("sql错误:" + err.Error() + "\r\n" + sql)
+		fmt.Println("db exec2 error:", sql, Args, err.Error())
+		if strings.Contains(err.Error(), "通讯链接失败") {
+			fmt.Println("通讯链接失败,重建所有链接...")
+			dbPool = make(map[string]*xorm.Engine)
+		}
+		//记录操作日志
+		var atime = time.Now().Format("2006-01-02 15:04:05")
+		var log = fmt.Sprintf("%s %s %s", sql, Args, err.Error())
+		Exec("insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
+			"", uid, username, "系统日志", "SQL", "["+module+"]"+XX.DriverName()+" Exec3 执行错误", log, ip, atime,
+		)
+		//调试状态记录SQL---------------------------
+		if debug == "1" {
+			var atime = time.Now().Format("2006-01-02 15:04:05")
+			var log = fmt.Sprintf("%s %s %s", sql, _logparams, err.Error())
+			Exec("insert into adm_debug(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
+				"", uid, username, "DEBUG", module, XX.DriverName()+" Exec3 执行错误", log, ip, atime,
+			)
+		}
+
+		session.Rollback()
+		return 0
+	}
+	//调试状态记录SQL---------------------------
+	if debug == "1" {
+		var atime = time.Now().Format("2006-01-02 15:04:05")
+		var log = fmt.Sprintf("%s %s %s", sql, _logparams, "ok")
+		Exec("insert into adm_debug(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
+			"", uid, username, module, "DEBUG", module, XX.DriverName()+" Exec3 执行错误", log, ip, atime,
+		)
 	}
 
 	err = session.Commit()
@@ -649,7 +957,7 @@ func Insert(sql string, tb string, Args ...interface{}) int64 {
 }
 
 /*
-Insert 执行插入语句 --指定数据库链接
+Insert2 执行插入语句 --指定数据库链接
 */
 func Insert2(XX *xorm.Engine, sql string, tb string, Args ...interface{}) int64 {
 	var index = 0
@@ -734,6 +1042,118 @@ func Insert2(XX *xorm.Engine, sql string, tb string, Args ...interface{}) int64 
 	}
 	var id = rst[0]["id"]
 	var i, _ = strconv.ParseInt(id, 10, 64)
+
+	//提交事务
+	err = session.Commit()
+	if err != nil {
+		return 0
+	}
+
+	return i
+}
+
+/*
+Insert3 执行插入语句 --指定数据库链接
+*/
+func Insert3(XX *xorm.Engine, debug, uid, username, module, ip, sql string, tb string, Args ...interface{}) int64 {
+	var index = 0
+	rear := append([]interface{}{}, Args[index:]...)
+	Args = append(Args[0:index], sql)
+	Args = append(Args, rear...)
+
+	//--------------------------------------------------------------------------------------
+	//如果这个方法执行超时x秒，则会记录日志
+	var paramSlice []string
+	for _, param := range Args {
+		var p = ""
+		switch param.(type) {
+		case string:
+			p = param.(string)
+		case int:
+			p = fmt.Sprintf("%d", param)
+		case int32:
+			p = fmt.Sprintf("%d", param)
+		case int64:
+			p = fmt.Sprintf("%d", param)
+		default:
+			p = fmt.Sprintf("%s", param)
+		}
+		paramSlice = append(paramSlice, p)
+	}
+	_logparams := strings.Join(paramSlice, ",")
+	defer TimeoutWarning(XX.DriverName()+"[Insert2]", sql+_logparams, time.Now(), float64(0.5))
+	//--------------------------------------------------------------------------------------
+
+	//启用事务
+	session := XX.NewSession()
+	defer session.Close()
+	session.Begin()
+
+	//为并发加锁
+	xLock.Lock()
+	_, err := session.Exec(Args...)
+	xLock.Unlock()
+	//_, err := XX.Exec(Args...)
+
+	if err != nil {
+		beego.Error("sql错误:" + err.Error() + "\r\n" + sql)
+		fmt.Println("db exec2 error:", sql, Args, err.Error())
+		if strings.Contains(err.Error(), "通讯链接失败") {
+			fmt.Println("通讯链接失败,重建所有链接...")
+			dbPool = make(map[string]*xorm.Engine)
+		}
+		session.Rollback()
+
+		//记录debug日志
+		var atime = time.Now().Format("2006-01-02 15:04:05")
+		var ip = ""
+		var log = fmt.Sprintf("%s %s %s", sql, Args, err.Error())
+		Exec("insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
+			"", "", "", "系统日志", "SQL", XX.DriverName()+" Insert2 查询错误", log, ip, atime,
+		)
+		//调试状态记录SQL---------------------------
+		if debug == "1" {
+			var atime = time.Now().Format("2006-01-02 15:04:05")
+			var log = fmt.Sprintf(" %s %s %s", sql, _logparams, "ok")
+			Exec("insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
+				"", uid, username, module, "DEBUG", module, XX.DriverName()+" Exec2 执行错误", log, ip, atime,
+			)
+		}
+		return 0
+	}
+
+	sql = `select last_insert_rowid() as id from ` + tb
+	if XX.DriverName() == "sqlite" {
+		sql = `SELECT last_insert_rowid() AS id`
+	}
+	if XX.DriverName() == "mysql" {
+		sql = `SELECT LAST_INSERT_ID() AS id`
+	}
+	if XX.DriverName() == "mssql" {
+		sql = `SELECT @@IDENTITY as id`
+	}
+	var r, err1 = session.Query(sql)
+
+	if err1 != nil {
+		session.Rollback()
+		return 0
+	}
+	rst := ParseByte(X.DriverName(), r)
+	if len(rst) < 1 {
+		session.Rollback()
+		return 0
+	}
+	var id = rst[0]["id"]
+	var i, _ = strconv.ParseInt(id, 10, 64)
+
+	//调试状态记录SQL---------------------------
+	if debug == "1" {
+		var atime = time.Now().Format("2006-01-02 15:04:05")
+		var log = fmt.Sprintf("%s %s %s", sql, _logparams, "ok")
+		Exec("insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
+			"", uid, username, module, "DEBUG", module, XX.DriverName()+" Insert3 插入错误", log, ip, atime,
+		)
+	}
 
 	//提交事务
 	err = session.Commit()
