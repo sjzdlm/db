@@ -78,7 +78,7 @@ func NewDb(constr string) *xorm.Engine {
 		} else if con["dbtype"] == "mssql2k" {
 			XX, err = xorm.NewEngine("odbc", "driver={SQL Server};server="+con["server"]+","+con["port"]+";database="+con["dbname"]+";uid="+con["uid"]+";pwd="+con["pwd"]+";")
 		} else {
-			XX, err = xorm.NewEngine(con["dbtype"], con["uid"]+":"+con["pwd"]+"@tcp("+con["server"]+":"+con["port"]+")/"+con["dbname"]+"?charset=utf8")
+			XX, err = xorm.NewEngine(con["dbtype"], con["uid"]+":"+con["pwd"]+"@tcp("+con["server"]+":"+con["port"]+")/"+con["dbname"]+"?charset=utf8&multiStatements=true")
 		}
 		if err != nil {
 			return nil
@@ -113,7 +113,7 @@ func NewDbMysql(conn string, server, port, uid, pwd, dbname string) *xorm.Engine
 	} else {
 		var XX *xorm.Engine
 		var err error
-		XX, err = xorm.NewEngine("mysql", uid+":"+pwd+"@tcp("+server+":"+port+")/"+dbname+"?charset=utf8")
+		XX, err = xorm.NewEngine("mysql", uid+":"+pwd+"@tcp("+server+":"+port+")/"+dbname+"?charset=utf8&multiStatements=true") //allowMultiQueries=true
 		if err != nil {
 			return nil
 		}
