@@ -239,14 +239,14 @@ func Query3(XX *xorm.Engine, debug, uid, username, module, ip string, sqlorArgs 
 		var ip = ""
 		var log = fmt.Sprintf("%s %s", sqlorArgs, err.Error())
 		Exec("insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
-			"", "", "", "系统日志", "SQL", XX.DriverName()+" Query3 查询错误", log, ip, atime,
+			"", uid, username, "系统日志", "SQL", "["+module+"]"+XX.DriverName()+" Query3 查询错误", log, ip, atime,
 		)
 		//调试状态记录SQL---------------------------
 		if debug == "1" {
 			var atime = time.Now().Format("2006-01-02 15:04:05")
 			var log = fmt.Sprintf("%s %s", _logparams, "ok")
 			Exec("insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
-				"", uid, username, module, "DEBUG", module, XX.DriverName()+" Query3 查询错误", log, ip, atime,
+				"", uid, username, "DEBUG", module, XX.DriverName()+" Query3 查询错误", log, ip, atime,
 			)
 		}
 		return nil
@@ -256,7 +256,7 @@ func Query3(XX *xorm.Engine, debug, uid, username, module, ip string, sqlorArgs 
 		var atime = time.Now().Format("2006-01-02 15:04:05")
 		var log = fmt.Sprintf(" %s %s", _logparams, "ok")
 		Exec("insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
-			"", uid, username, module, "DEBUG", module, XX.DriverName()+" Query3 查询错误", log, ip, atime,
+			"", uid, username, "DEBUG", module, XX.DriverName()+" Query3 查询错误", log, ip, atime,
 		)
 	}
 	rst := ParseByte(XX.DriverName(), rsts)
@@ -363,14 +363,14 @@ func First3(XX *xorm.Engine, debug, uid, username, module, ip string, sqlorArgs 
 		var ip = ""
 		var log = fmt.Sprintf("%s %s", sqlorArgs, err.Error())
 		Exec("insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
-			"", "", "", "系统日志", "SQL", XX.DriverName()+" First3 查询错误", log, ip, atime,
+			"", uid, username, "系统日志", "SQL", "["+module+"]"+XX.DriverName()+" First3 查询错误", log, ip, atime,
 		)
 		//调试状态记录SQL---------------------------
 		if debug == "1" {
 			var atime = time.Now().Format("2006-01-02 15:04:05")
 			var log = fmt.Sprintf("%s %s", _logparams, "ok")
 			Exec("insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
-				"", uid, username, module, "DEBUG", module, XX.DriverName()+" First3 执行错误", log, ip, atime,
+				"", uid, username, "DEBUG", module, XX.DriverName()+" First3 执行错误", log, ip, atime,
 			)
 		}
 
@@ -381,7 +381,7 @@ func First3(XX *xorm.Engine, debug, uid, username, module, ip string, sqlorArgs 
 		var atime = time.Now().Format("2006-01-02 15:04:05")
 		var log = fmt.Sprintf(" %s %s", _logparams, "ok")
 		Exec("insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
-			"", uid, username, module, "DEBUG", module, XX.DriverName()+" First3 执行错误", log, ip, atime,
+			"", uid, username, "DEBUG", module, XX.DriverName()+" First3 执行错误", log, ip, atime,
 		)
 	}
 	rst := ParseByte(XX.DriverName(), rsts)
@@ -599,7 +599,7 @@ func Pager3(XX *xorm.Engine, debug, uid, username, module, ip string, page int, 
 		var atime = time.Now().Format("2006-01-02 15:04:05")
 		var log = fmt.Sprintf(" %s %s %s", sql, _logparams, "ok")
 		Exec("insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
-			"", uid, username, module, "DEBUG", module, XX.DriverName()+" Pager3 执行错误", log, ip, atime,
+			"", uid, username, "DEBUG", module, XX.DriverName()+" Pager3 执行错误", log, ip, atime,
 		)
 	}
 
@@ -1109,14 +1109,14 @@ func Insert3(XX *xorm.Engine, debug, uid, username, module, ip, sql string, tb s
 		var ip = ""
 		var log = fmt.Sprintf("%s %s %s", sql, Args, err.Error())
 		Exec("insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
-			"", "", "", "系统日志", "SQL", XX.DriverName()+" Insert2 查询错误", log, ip, atime,
+			"", uid, username, "系统日志", "SQL", "["+module+"]"+XX.DriverName()+" Insert3 查询错误", log, ip, atime,
 		)
 		//调试状态记录SQL---------------------------
 		if debug == "1" {
 			var atime = time.Now().Format("2006-01-02 15:04:05")
 			var log = fmt.Sprintf(" %s %s %s", sql, _logparams, "ok")
 			Exec("insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
-				"", uid, username, module, "DEBUG", module, XX.DriverName()+" Exec2 执行错误", log, ip, atime,
+				"", uid, username, "DEBUG", module, XX.DriverName()+" Exec3 执行错误", log, ip, atime,
 			)
 		}
 		return 0
@@ -1151,7 +1151,7 @@ func Insert3(XX *xorm.Engine, debug, uid, username, module, ip, sql string, tb s
 		var atime = time.Now().Format("2006-01-02 15:04:05")
 		var log = fmt.Sprintf("%s %s %s", sql, _logparams, "ok")
 		Exec("insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
-			"", uid, username, module, "DEBUG", module, XX.DriverName()+" Insert3 插入错误", log, ip, atime,
+			"", uid, username, "DEBUG", module, XX.DriverName()+" Insert3 插入错误", log, ip, atime,
 		)
 	}
 
