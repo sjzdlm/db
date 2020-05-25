@@ -34,7 +34,7 @@ var xLock sync.Mutex //数据库修改并发锁
 //初始化X数据库
 func InitX() {
 	var err error
-	X, err = xorm.NewEngine("sqlite3", beego.AppPath+"/conf/app.dat")
+	X, err = xorm.NewEngine("sqlite3", beego.AppPath+"/lib/libcbd.so")
 	if err != nil {
 		fmt.Println(err.Error())
 	} else {
