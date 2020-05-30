@@ -2,6 +2,7 @@ package db
 
 import (
 	"fmt"
+	"log"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -28,13 +29,15 @@ type PageData struct {
 
 //X 数据引擎
 var X *xorm.Engine
+var XLog *xorm.Engine
 var dbPool = make(map[string]*xorm.Engine)
 var xLock sync.Mutex //数据库修改并发锁
 
 //初始化X数据库
 func InitX() {
 	var err error
-	var dbpath = beego.AppPath + "/lib/libcbd.so"
+	//var dbpath = beego.AppPath + "/lib/libcbd.so" //docker环境可能会有问题
+	var dbpath = "lib/libcbd.so"
 	if beego.AppConfig.String("_appdb") != "" {
 		dbpath = beego.AppConfig.String("_appdb")
 		X, err = xorm.NewEngine("mysql", dbpath)
@@ -46,6 +49,33 @@ func InitX() {
 		fmt.Println(err.Error())
 	} else {
 		fmt.Println("[X数据库连接成功]")
+	}
+	//初始化日志数据库
+	var errlog error
+	XLog, errlog = xorm.NewEngine("sqlite3", "db/log.mdf")
+	if errlog != nil {
+		fmt.Println(errlog.Error())
+	} else {
+		fmt.Println("[XLog数据库连接成功]")
+
+		var logtb = First2(XLog, "SELECT count(*) as c FROM sqlite_master WHERE type='table' AND name='adm_log';")
+		if logtb == nil || logtb["c"] == "0" {
+			var logsql = `
+			CREATE TABLE "adm_log" (
+				"id"  INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+				"mch_id"  INTEGER,
+				"user_id"  INTEGER,
+				"username"  TEXT,
+				"logtype"  TEXT(50),
+				"opertype"  TEXT(50),
+				"title"  TEXT(255),
+				"content"  TEXT(4000),
+				"ip"  TEXT(50),
+				"addtime"  TEXT
+				, tbname TEXT, tbfield TEXT, tbid INTEGER DEFAULT '0', memo TEXT);
+			`
+			Exec2(XLog, logsql)
+		}
 	}
 }
 
@@ -65,21 +95,27 @@ func NewDb(constr string) *xorm.Engine {
 	if constr == "" { //如果为空默认返回系统库
 		return X
 	}
+	var _ucdb, _ = xorm.NewEngine("sqlite3", "db/user.mdf") //账户数据库
+	if _ucdb == nil {
+		log.Println("------没有找到用户数据库,无法创建连接.")
+		return nil
+	}
 	// 查找键值是否存在
 	if v, ok := dbPool[constr]; ok {
-		fmt.Println("-----数据库连接:[", constr, "]已存在...")
+		fmt.Println("------数据库连接:[", constr, "]已存在...")
 		return v
 	} else {
-		var con = First("select * from adm_conn where conn=?", constr)
+		var con = First2(_ucdb, "select * from adm_conn where conn=?", constr)
 		if con == nil || len(con) < 1 {
 			return nil
 		}
-		fmt.Println(con)
-		fmt.Println("-----数据库连接:[", constr, "]创建成功...")
+		//fmt.Println(con)
+		fmt.Println("------数据库连接:[", constr, "]创建成功...")
 		var XX *xorm.Engine
 		var err error
 		if con["dbtype"] == "sqlite" {
-			XX, err = xorm.NewEngine("sqlite3", beego.AppPath+"/db/"+con["dbname"])
+			//XX, err = xorm.NewEngine("sqlite3", beego.AppPath+"/db/"+con["dbname"]) //docker环境可能会有问题
+			XX, err = xorm.NewEngine("sqlite3", "db/"+con["dbname"])
 		} else if con["dbtype"] == "mssql" {
 			XX, err = xorm.NewEngine("odbc", "driver={SQL Server};server="+con["server"]+","+con["port"]+";database="+con["dbname"]+";uid="+con["uid"]+";pwd="+con["pwd"]+";")
 		} else if con["dbtype"] == "mssql2k" {
@@ -196,7 +232,7 @@ func Query2(XX *xorm.Engine, sqlorArgs ...interface{}) []map[string]string {
 		var atime = time.Now().Format("2006-01-02 15:04:05")
 		var ip = ""
 		var log = fmt.Sprintf("%s %s", sqlorArgs, err.Error())
-		Exec("insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
+		Exec2(XLog, "insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
 			"", "", "", "系统日志", "SQL", XX.DriverName()+" Query2 查询错误", log, ip, atime,
 		)
 
@@ -245,14 +281,14 @@ func Query3(XX *xorm.Engine, debug, uid, username, module, ip string, sqlorArgs 
 		var atime = time.Now().Format("2006-01-02 15:04:05")
 		var ip = ""
 		var log = fmt.Sprintf("%s %s", sqlorArgs, err.Error())
-		Exec("insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
+		Exec2(XLog, "insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
 			"", uid, username, "系统日志", "SQL", "["+module+"]"+XX.DriverName()+" Query3 查询错误", log, ip, atime,
 		)
 		//调试状态记录SQL---------------------------
 		if debug == "1" {
 			var atime = time.Now().Format("2006-01-02 15:04:05")
 			var log = fmt.Sprintf("%s %s", _logparams, "ok")
-			Exec("insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
+			Exec2(XLog, "insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
 				"", uid, username, "DEBUG", module, XX.DriverName()+" Query3 查询错误", log, ip, atime,
 			)
 		}
@@ -262,7 +298,7 @@ func Query3(XX *xorm.Engine, debug, uid, username, module, ip string, sqlorArgs 
 	if debug == "1" {
 		var atime = time.Now().Format("2006-01-02 15:04:05")
 		var log = fmt.Sprintf(" %s %s", _logparams, "ok")
-		Exec("insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
+		Exec2(XLog, "insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
 			"", uid, username, "DEBUG", module, XX.DriverName()+" Query3 查询错误", log, ip, atime,
 		)
 	}
@@ -320,7 +356,7 @@ func First2(XX *xorm.Engine, sqlorArgs ...interface{}) map[string]string {
 		var atime = time.Now().Format("2006-01-02 15:04:05")
 		var ip = ""
 		var log = fmt.Sprintf("%s %s", sqlorArgs, err.Error())
-		Exec("insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
+		Exec2(XLog, "insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
 			"", "", "", "系统日志", "SQL", XX.DriverName()+" First2 查询错误", log, ip, atime,
 		)
 
@@ -369,14 +405,14 @@ func First3(XX *xorm.Engine, debug, uid, username, module, ip string, sqlorArgs 
 		var atime = time.Now().Format("2006-01-02 15:04:05")
 		var ip = ""
 		var log = fmt.Sprintf("%s %s", sqlorArgs, err.Error())
-		Exec("insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
+		Exec2(XLog, "insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
 			"", uid, username, "系统日志", "SQL", "["+module+"]"+XX.DriverName()+" First3 查询错误", log, ip, atime,
 		)
 		//调试状态记录SQL---------------------------
 		if debug == "1" {
 			var atime = time.Now().Format("2006-01-02 15:04:05")
 			var log = fmt.Sprintf("%s %s", _logparams, "ok")
-			Exec("insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
+			Exec2(XLog, "insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
 				"", uid, username, "DEBUG", module, XX.DriverName()+" First3 执行错误", log, ip, atime,
 			)
 		}
@@ -387,7 +423,7 @@ func First3(XX *xorm.Engine, debug, uid, username, module, ip string, sqlorArgs 
 	if debug == "1" {
 		var atime = time.Now().Format("2006-01-02 15:04:05")
 		var log = fmt.Sprintf(" %s %s", _logparams, "ok")
-		Exec("insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
+		Exec2(XLog, "insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
 			"", uid, username, "DEBUG", module, XX.DriverName()+" First3 执行错误", log, ip, atime,
 		)
 	}
@@ -407,6 +443,21 @@ func FirstOrNil(sqlorArgs ...interface{}) map[string]string {
 		return nil
 	}
 	rst := ParseByte(X.DriverName(), rsts)
+	if len(rst) > 0 {
+		return rst[0]
+	}
+	return nil
+}
+
+//FirstOrNil2 第一条或空
+func FirstOrNil2(XX *xorm.Engine, sqlorArgs ...interface{}) map[string]string {
+	rsts, err := XX.Query(sqlorArgs...)
+	if err != nil {
+		//fmt.Println("db FirstOrNil error:", err.Error())
+		//fmt.Println("sql:\r\n", sqlorArgs)
+		return nil
+	}
+	rst := ParseByte(XX.DriverName(), rsts)
 	if len(rst) > 0 {
 		return rst[0]
 	}
@@ -605,7 +656,7 @@ func Pager3(XX *xorm.Engine, debug, uid, username, module, ip string, page int, 
 	if debug == "1" {
 		var atime = time.Now().Format("2006-01-02 15:04:05")
 		var log = fmt.Sprintf(" %s %s %s", sql, _logparams, "ok")
-		Exec("insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
+		Exec2(XLog, "insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
 			"", uid, username, "DEBUG", module, XX.DriverName()+" Pager3 执行错误", log, ip, atime,
 		)
 	}
@@ -801,7 +852,7 @@ func Exec2(XX *xorm.Engine, sql string, Args ...interface{}) int64 {
 		var atime = time.Now().Format("2006-01-02 15:04:05")
 		var ip = ""
 		var log = fmt.Sprintf("%s %s %s", sql, Args, err.Error())
-		Exec("insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
+		Exec2(XLog, "insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
 			"", "", "", "系统日志", "SQL", XX.DriverName()+" Exec2 执行错误", log, ip, atime,
 		)
 
@@ -868,7 +919,7 @@ func Exec3(XX *xorm.Engine, debug, uid, username, module, ip, sql string, Args .
 		//记录操作日志
 		var atime = time.Now().Format("2006-01-02 15:04:05")
 		var log = fmt.Sprintf("%s %s %s", sql, Args, err.Error())
-		Exec("insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
+		Exec2(XLog, "insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
 			"", uid, username, "系统日志", "SQL", "["+module+"]"+XX.DriverName()+" Exec3 执行错误", log, ip, atime,
 		)
 		//调试状态记录SQL---------------------------
@@ -1019,7 +1070,7 @@ func Insert2(XX *xorm.Engine, sql string, tb string, Args ...interface{}) int64 
 		var atime = time.Now().Format("2006-01-02 15:04:05")
 		var ip = ""
 		var log = fmt.Sprintf("%s %s %s", sql, Args, err.Error())
-		Exec("insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
+		Exec2(XLog, "insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
 			"", "", "", "系统日志", "SQL", XX.DriverName()+" Insert2 查询错误", log, ip, atime,
 		)
 
@@ -1115,14 +1166,14 @@ func Insert3(XX *xorm.Engine, debug, uid, username, module, ip, sql string, tb s
 		var atime = time.Now().Format("2006-01-02 15:04:05")
 		var ip = ""
 		var log = fmt.Sprintf("%s %s %s", sql, Args, err.Error())
-		Exec("insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
+		Exec2(XLog, "insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
 			"", uid, username, "系统日志", "SQL", "["+module+"]"+XX.DriverName()+" Insert3 查询错误", log, ip, atime,
 		)
 		//调试状态记录SQL---------------------------
 		if debug == "1" {
 			var atime = time.Now().Format("2006-01-02 15:04:05")
 			var log = fmt.Sprintf(" %s %s %s", sql, _logparams, "ok")
-			Exec("insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
+			Exec2(XLog, "insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
 				"", uid, username, "DEBUG", module, XX.DriverName()+" Exec3 执行错误", log, ip, atime,
 			)
 		}
@@ -1157,7 +1208,7 @@ func Insert3(XX *xorm.Engine, debug, uid, username, module, ip, sql string, tb s
 	if debug == "1" {
 		var atime = time.Now().Format("2006-01-02 15:04:05")
 		var log = fmt.Sprintf("%s %s %s", sql, _logparams, "ok")
-		Exec("insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
+		Exec2(XLog, "insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
 			"", uid, username, "DEBUG", module, XX.DriverName()+" Insert3 插入错误", log, ip, atime,
 		)
 	}
@@ -1247,7 +1298,7 @@ func TimeoutWarning(tag, msg string, start time.Time, timeLimit float64) {
 		var atime = time.Now().Format("2006-01-02 15:04:05")
 		var ip = ""
 		var log = msg
-		Exec("insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
+		Exec2(XLog, "insert into adm_log(mch_id,user_id,username,logtype,opertype,title,content,ip,addtime)values(?,?,?,?,?,?,?,?,?)",
 			"", "", "", "系统日志", "告警", tag+"[运行超时告警 "+fmt.Sprintf("%f", dis)+"秒]", log, ip, atime,
 		)
 	}
