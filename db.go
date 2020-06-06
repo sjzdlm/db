@@ -90,22 +90,28 @@ func Del(conn string) {
 	}
 }
 
+//ConnDb 连接数据库的连接
+func ConnDb() *xorm.Engine {
+	var _conndb, _ = xorm.NewEngine("sqlite3", "db/user.mdf") //账户数据库
+	if _conndb == nil {
+		log.Println("------没有找到连接数据库,无法创建连接.")
+		return nil
+	}
+	return _conndb
+}
+
 //生成新的数据库链接
 func NewDb(constr string) *xorm.Engine {
 	if constr == "" { //如果为空默认返回系统库
 		return X
 	}
-	var _ucdb, _ = xorm.NewEngine("sqlite3", "db/user.mdf") //账户数据库
-	if _ucdb == nil {
-		log.Println("------没有找到用户数据库,无法创建连接.")
-		return nil
-	}
+	var _conndb = ConnDb()
 	// 查找键值是否存在
 	if v, ok := dbPool[constr]; ok {
-		fmt.Println("------数据库连接:[", constr, "]已存在...")
+		//fmt.Println("------数据库连接:[", constr, "]已存在...")
 		return v
 	} else {
-		var con = First2(_ucdb, "select * from adm_conn where conn=?", constr)
+		var con = First2(_conndb, "select * from adm_conn where conn=?", constr)
 		if con == nil || len(con) < 1 {
 			return nil
 		}
